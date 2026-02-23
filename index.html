@@ -128,7 +128,8 @@ body.dark-mode #notes span {
 <div class="clock-container"><div id="clock">00:00:00 AM</div><div id="date">Loading...</div></div>
 
 <div class="search-wrapper">
-  <input type="text" class="search-bar" <input type="text" class="search-bar" id="searchInput" autofocus placeholder="Search Google..." autocomplete="off">
+  <input type="text" class="search-bar" id="searchInput" autofocus placeholder="Search Google..." autocomplete="off">
+<ul id="suggestions"></ul>
 
 
 
@@ -141,24 +142,15 @@ body.dark-mode #notes span {
 <input type="file" id="bgPicker" style="display:none" accept="image/*" onchange="localBackground(this)">
 
 <script>
+ 
 const HISTORY_KEY = "search_history_v1";
 const SAVE_KEY = "dashboard_final_v1";
 function toggleTheme() {
     document.body.classList.toggle('dark-mode');
-    // Save to your existing state object
     state.darkMode = document.body.classList.contains('dark-mode');
-    function toggleTheme() {
-    document.body.classList.toggle('dark-mode');
-    
-    // Save the new status to the state object
-    state.darkMode = document.body.classList.contains('dark-mode');
-    
-    // Write to localStorage
-    save(); 
+    save();
 }
 
-    save(); 
-}
 
 const googleAppsList = [
   {id: "notes", name: "Notes", url: "#", emoji: "📝"},
@@ -173,7 +165,9 @@ const googleAppsList = [
   {name: "Sheets", url: "https://sheets.google.com", icon: "https://upload.wikimedia.org/wikipedia/commons/3/30/Google_Sheets_logo_%282014-2020%29.svg"},
   {name: "Forms", url: "https://forms.google.com", icon: "https://upload.wikimedia.org"},
   {name: "Meet", url: "https://meet.google.com", icon: "https://upload.wikimedia.org/wikipedia/commons/9/9b/Google_Meet_icon_%282020%29.svg"},
+  {name: "Keep", url: "https://keep.google.com", icon: "https://upload.wikimedia.org/wikipedia/commons/c/cb/Google_Keep_2020_Logo.svg"},
   {name: "Keep", url: "https://keep.google.com", icon: "https://upload.wikimedia.org/wikipedia/commons/c/cb/Google_Keep_2020_Logo.svg"}
+
 ];
 
 let state = { apps: [], background: null, cloak: {title: "Classes", icon: "https://ssl.gstatic.com"}, panic: {key: "`", url: "https://classroom.google.com"}, pass: null, notes: "" };
@@ -409,9 +403,37 @@ function localBackground(input) {
   }
 }
 
-function exportSave() { navigator.clipboard.writeText(JSON.stringify(state)).then(() => alert("Save code auto-copied to clipboard!")); }
-function importSave() { let s = prompt("Paste Save Code:"); if(s) { state = JSON.parse(s); save(); location.reload(); } }
+function exportSave() {
+    const text = JSON.stringify(state);
 
+    const box = document.createElement("textarea");
+    box.value = text;
+    document.body.appendChild(box);
+    box.select();
+    document.execCommand("copy");
+    document.body.removeChild(box);
+
+    alert("Save code copied to clipboard!");
+}
+function importSave() {
+    const s = prompt("Paste Save Code:");
+    if (!s) return;
+
+    try {
+        const parsed = JSON.parse(s);
+
+        // Prevent broken saves
+        if (!parsed.apps) throw "Invalid Save";
+
+        state = parsed;
+        save();
+        location.reload();
+
+    } catch (err) {
+        alert("Invalid save code.");
+        console.error(err);
+    }
+}
 function factoryReset() { 
   if(confirm("Reset everything?")) { 
     localStorage.clear(); 
