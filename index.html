@@ -8,6 +8,30 @@
 <title>Classes</title>
 <link id="tabIcon" rel="icon" href="https://ssl.gstatic.com">
 <style>
+/* Using !important to force the color to show up */
+
+/* Clean Blue Highlight - No Red Borders */
+#suggestions li.nav-active {
+    background-color: #4285f4 !important; /* Google Blue */
+    color: #ffffff !important;           /* White Text */
+    border: none !important;             /* Removes the red box border */
+    outline: none !important;            /* Removes the red box outline */
+    border-radius: 4px;                  /* Optional: smooth corners */
+}
+
+/* Ensure all text inside the highlighted row turns white */
+#suggestions li.nav-active * {
+    color: #ffffff !important;
+}
+
+
+/* Force the text inside to be white as well */
+#suggestions li.nav-active .stext {
+    color: white !important;
+}
+
+  
+
 /* Delete Mode Jiggle Animation */
 @keyframes jiggle {
     0% { transform: rotate(-1deg); }
@@ -168,7 +192,6 @@ const googleAppsList = [
   {id: "keep", name: "Keep", url: "https://keep.google.com", icon: "https://upload.wikimedia.org/wikipedia/commons/c/cb/Google_Keep_2020_Logo.svg"},
   {id: "amazon", name: "Amazon", url: "https://www.amazon.com", icon: "https://www.amazon.com/favicon.ico"}
 ];
-
 let state = { apps: [], background: null, cloak: {title: "Classes", icon: "https://ssl.gstatic.com"}, panic: {key: "`", url: "https://classroom.google.com"}, pass: null, notes: "" };
 
 function save() { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); }
@@ -204,6 +227,36 @@ function load() {
     document.getElementById('noteBox').value = state.notes || "";
 }
 
+document.getElementById('searchInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Tab') {
+        const suggestions = document.getElementById('suggestions');
+        // This line is the most important: finding the list items
+        const items = suggestions.getElementsByTagName('li');
+        
+        if (suggestions.style.display === 'block' && items.length > 0) {
+            e.preventDefault(); 
+            e.stopImmediatePropagation();
+
+            // 1. Find who has the highlight right now
+            let currentIndex = -1;
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].classList.contains('nav-active')) {
+                    currentIndex = i;
+                    items[i].classList.remove('nav-active');
+                    break;
+                }
+            }
+
+            // 2. Move to the next one
+            let nextIndex = (currentIndex + 1) % items.length;
+
+            // 3. FORCE the class onto the element
+            items[nextIndex].className += ' nav-active'; 
+            
+            console.log("Now highlighting index: " + nextIndex); // Check your console (F12) for this!
+        }
+    }
+}, true);
 
 let currentFocus = -1; // Keeps track of which item is highlighted
 
@@ -220,92 +273,6 @@ function handleSearch(q) {
     }
 }
 
-window.renderResults = function(data) {
-    // Reset the "Tab" tracker every time we get new results
-    currentFocus = -1;
-
-    const val = document.getElementById('searchInput').value.toLowerCase();
-    const hist = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]")
-        .filter(h => h.toLowerCase().includes(val))
-        .slice(0, 3);
-        
- 
-    const ul = document.getElementById('suggestions');
-    ul.innerHTML = "";
-
-    // Build the list
-    combined.slice(0, 8).forEach((item) => {
-        const li = document.createElement('li');
-        // Store the clean text in the element for easy access
-        li.setAttribute('data-val', item.t);
-        li.innerHTML = `<span style="margin-right:10px; opacity:0.6">${item.i}</span>${item.t}`;
-        
-        // Mouse Click
-        li.onclick = () => {
-            document.getElementById('searchInput').value = item.t;
-            handleSearch(item.t);
-        };
-        ul.appendChild(li);
-    });
-
-    ul.style.display = combined.length ? 'block' : 'none';
-};
-
-// --- EVENT LISTENERS ---
-
-const input = document.getElementById('searchInput');
-const ul = document.getElementById('suggestions');
-
-// 1. Listen for Typing
-input.addEventListener('input', function() {
-    const val = this.value.trim();
-    if (!val) {
-        ul.style.display = 'none';
-        return;
-    }
-    // Fetch from Google via JSONP
-    const script = document.createElement('script');
-    script.src = "https://suggestqueries.google.com/complete/search?client=firefox&callback=renderResults&q=" + encodeURIComponent(val);
-    document.body.appendChild(script);
-    script.remove();
-});
-
-// 2. Listen for Keys (Tab & Enter)
-input.addEventListener('keydown', function(e) {
-    let items = ul.getElementsByTagName('li');
-    
-    if (e.key === 'Tab') {
-        if (items.length > 0) {
-            e.preventDefault(); // STOP the focus from leaving the box
-            
-            // Remove highlight from previous item
-            if (currentFocus >= 0 && currentFocus < items.length) {
-                items[currentFocus].classList.remove('nav-active');
-            }
-
-            // Move down one (loop back to top if at bottom)
-            currentFocus++;
-            if (currentFocus >= items.length) currentFocus = 0;
-
-            // Highlight the new item
-            items[currentFocus].classList.add('nav-active');
-            
-            // Fill the search bar with the highlighted text
-            input.value = items[currentFocus].getAttribute('data-val');
-        }
-    } 
-    else if (e.key === 'Enter') {
-        // If we have an item highlighted via Tab, 'click' it
-        if (currentFocus > -1 && items[currentFocus]) {
-            e.preventDefault();
-            items[currentFocus].click();
-        } else {
-            // Otherwise just search whatever text is there
-            handleSearch(input.value);
-            ul.style.display = 'none';
-        }
-    }
-});
 
 // 3. Close when clicking away
 document.addEventListener('click', function(e) {
@@ -330,15 +297,18 @@ window.renderResults = function(data) {
     ul.innerHTML = "";
 
     // Render the list
-    combined.slice(0, 8).forEach(item => {
-        const li = document.createElement('li');
-        li.innerHTML = `<span style="margin-right:10px; opacity:0.6">${item.i}</span>${item.t}`;
-        li.onclick = () => {
-            document.getElementById('searchInput').value = item.t;
-            handleSearch(item.t);
-        };
-        ul.appendChild(li);
-    });
+    // Locate this section in your script
+combined.slice(0, 8).forEach(item => {
+    const li = document.createElement('li');
+    // This line is the "ID tag" for the suggestion
+    li.setAttribute("data-val", item.t); 
+    li.innerHTML = `<span class="sicon">${item.i}</span><span class="stext">${item.t}</span>`;
+    li.onclick = () => {
+        handleSearch(item.t);
+    };
+    ul.appendChild(li);
+});
+
 
     ul.style.display = combined.length ? 'block' : 'none';
 };
@@ -507,6 +477,7 @@ document.getElementById('grid').addEventListener('click', function(e) {
     }
 }, true); // The 'true' makes it intercept clicks first
 
+
 document.getElementById('searchInput').addEventListener('keydown', function(e) {
     if (e.key === 'Tab') {
         const suggestions = document.getElementById('suggestions');
@@ -525,17 +496,33 @@ document.getElementById('searchInput').addEventListener('keydown', function(e) {
                 items[currentIndex].classList.remove('nav-active');
             }
 
-            // 4. Calculate NEXT index (starts at 0 if -1)
-            let nextIndex = (currentIndex + 1) % items.length;
+            // Replace your Tab listener block with this:
+document.getElementById('searchInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Tab') {
+        const suggestions = document.getElementById('suggestions');
+        const items = suggestions.querySelectorAll('li');
+        
+        if (suggestions.style.display === 'block' && items.length > 0) {
+            e.preventDefault(); 
+            e.stopImmediatePropagation();
 
-            // 5. Apply new highlight
+            let currentIndex = Array.from(items).findIndex(li => li.classList.contains('nav-active'));
+            if (currentIndex !== -1) {
+                items[currentIndex].classList.remove('nav-active');
+            }
+
+            let nextIndex = (currentIndex + 1) % items.length;
             items[nextIndex].classList.add('nav-active');
 
-            // 6. Update search bar text to the new item
-            this.value = items[nextIndex].innerText;
+            // NOTICE: The "this.value = ..." line is gone.
+            // Your typed text will now stay in the search bar.
         }
     }
-}, true); // The "true" ensures we catch the event before other scripts
+}, true);
+
+        }
+    }
+}, true); // The "true" ensures we catch the event before other scriptsss
 window.onload = () => {
     setTimeout(() => {
         document.getElementById('searchInput').focus();
